@@ -16,12 +16,12 @@ def _():
 
 
 @app.cell
-def _(os, sample):
+def _(np, os, sample):
     # Get problem input
     day_number = os.path.basename(__file__).split(sep=".")[0].split(sep="_")[-1]
     def post_process(data):
         # Problem-specific post-processing
-        data = [int(d) for d in data]
+        data = np.array([int(d.strip()) for d in data])
         return data
 
     def load_input(sample=False):
@@ -34,27 +34,39 @@ def _(os, sample):
 
 
 @app.cell
-def _(input_data, np):
+def _(input_data, sample):
     def problem_a(data):
-        # Create square matrix with repeated data columns
-        expense_matrix = np.array(data*len(data)).reshape((len(data), len(data)))
-        # Find coordinates of elements where sum is 2020 (note: 2 results, inversed indices)
-        idx_matching = np.argwhere(expense_matrix.transpose() + expense_matrix == 2020)[0]
-        # Return product of the data points at the indices
-        return data[idx_matching[0]] * data[idx_matching[1]]
+        # Num. preamble numbers of sample problem is 5, while real one is 25
+        n_preamble = 5 if sample else 25
+        # Sum_list always contains n_preamble numbers before idx
+        sum_list = data[:n_preamble]
+        idx = n_preamble
+        while True:
+            num = data[idx]
+            # Return from the function if no two numbers in sum_list sum up to num
+            remainder_list = num-sum_list
+            if not bool([True for r in remainder_list if r in sum_list and r != num]):
+                return num
+            # Set new idx and sum_list
+            idx += 1
+            sum_list = data[idx - n_preamble:idx]
     answer_a = problem_a(input_data)
     return (answer_a,)
 
 
 @app.cell
-def _(input_data):
+def _(answer_a, input_data):
     def problem_b(data):
-        # Loop through the data 3 times to solve
-        for i in data:
-            for j in data:
-                for k in data:
-                    if i+j+k == 2020:
-                        return i*j*k
+        start_idx = 0
+        while True:
+            sum_list = []
+            idx = start_idx
+            while sum(sum_list) < answer_a:
+                sum_list.append(data[idx])
+                idx += 1
+            if sum(sum_list) == answer_a:
+                return min(sum_list) + max(sum_list)
+            start_idx += 1
     answer_b = problem_b(input_data)
     return (answer_b,)
 

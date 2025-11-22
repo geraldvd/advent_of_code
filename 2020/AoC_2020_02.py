@@ -20,7 +20,7 @@ def _(os, sample):
     # Get problem input
     day_number = os.path.basename(__file__).split(sep=".")[0].split(sep="_")[-1]
     def post_process(data):
-        # TODO: problem-specific post-processing
+        # Problem-specific post-processing
         cleaned_data = []
         for d in data:
             d = d.split(' ')
@@ -33,7 +33,7 @@ def _(os, sample):
 
     def load_input(sample=False):
         curdir = "/".join(os.path.abspath(__file__).split("/")[:-1]) + "/"
-        filename = curdir + (f"input_{day_number}_sample{'_'+int(sample) if int(sample)>1 else ''}.txt" if sample else f"input_{day_number}.txt")
+        filename = curdir + (f"input_{day_number}_sample{'_'+str(sample) if int(sample)>1 else ''}.txt" if sample else f"input_{day_number}.txt")
         return post_process(open(filename, "r").readlines())
 
     input_data = load_input(sample)

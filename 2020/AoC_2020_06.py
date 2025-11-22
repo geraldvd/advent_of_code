@@ -11,7 +11,7 @@ def _():
     import numpy as np
 
     # Settings
-    sample = True # Fill in False, or the sample number (True and 1 are the same)
+    sample = False # Fill in False, or the sample number (True and 1 are the same)
     return os, sample
 
 
@@ -20,7 +20,9 @@ def _(os, sample):
     # Get problem input
     day_number = os.path.basename(__file__).split(sep=".")[0].split(sep="_")[-1]
     def post_process(data):
-        # TODO: problem-specific post-processing
+        # Problem-specific post-processing
+        data = [d.split('\n') for d in ''.join(data).strip().split('\n\n')]
+        print(data)
         return data
 
     def load_input(sample=False):
@@ -35,8 +37,8 @@ def _(os, sample):
 @app.cell
 def _(input_data):
     def problem_a(data):
-        # TODO solve problem a
-        return None
+        # Count unique letters per group
+        return sum([len(set(''.join(d))) for d in data])
     answer_a = problem_a(input_data)
     return (answer_a,)
 
@@ -44,8 +46,15 @@ def _(input_data):
 @app.cell
 def _(input_data):
     def problem_b(data):
-        # TODO solve problem b
-        return None
+        sum_counts = 0
+        for d in data:
+            unique_yes = set(''.join(d))
+            overlapping_yes = set()
+            for uy in unique_yes:
+                if sum([uy in di for di in d]) == len(d):
+                    overlapping_yes.add(uy)
+            sum_counts += len(overlapping_yes)
+        return sum_counts
     answer_b = problem_b(input_data)
     return (answer_b,)
 
