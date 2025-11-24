@@ -12,7 +12,7 @@ def _():
     import math
 
     # Settings
-    sample = 2 # Fill in False, or the sample number (True and 1 are the same)
+    sample = False # Fill in False, or the sample number (True and 1 are the same)
     return math, np, os, sample
 
 
@@ -50,6 +50,7 @@ def _(input_data):
                     jolt = jolt + i
                     jolt_seq.append(jolt)
                     break
+        jolt_seq.append(jolt_seq[-1]+3)
         return differences, jolt_seq
 
     def problem_a(data):
@@ -63,13 +64,19 @@ def _(input_data):
 @app.cell
 def _(calculate_jolt_list, input_data, math, np):
     def problem_b(data):
+        '''General strategy: look at the combinations possible with multiple single digit jumps, since in-between numbers can be left out. In the problem at hand, these are the only cases to consider:
+        # 1, 4, 5, 6, 9 -- (len of single diffs: 2) -- 2 combinations: 1) as-is, 2) leaving out 5
+        # 1, 4, 5, 6, 7, 10 -- (len of single diffs: 3) -- 4 combinations: 1) as-is, 2-3) leaving out 5 or 6, 4) leaving out 5 and 6
+        # 1, 4, 5, 6, 7, 8, 11 -- (len of single diffs: 4) -- 7 combinations: 1) as-is, 2-4) leaving out 1 of 5-7, 5-7) leaving out 2 of 5-7
+        '''
         _, jolt_seq = calculate_jolt_list(data)
-        print(jolt_seq)
+        # Calculate jolt step sizes and isolate groups of 1 step (as there are the opportunities to leave adapters out)
         seq = np.array(jolt_seq[1:]) - np.array(jolt_seq[:-1])
         count_single_increments = [len(i) for i in ''.join([str(s) for s in seq]).split('3') if len(i) > 1]
         print(count_single_increments)
-        print(math.prod([c+1 if c > 2 else c for c in count_single_increments]))
-        return None
+        # Use combinations in function docstring
+        comb_lookup = {2: 2, 3: 4, 4: 7}
+        return math.prod([comb_lookup[c] for c in count_single_increments])
     answer_b = problem_b(input_data)
     return (answer_b,)
 
@@ -79,18 +86,6 @@ def _(answer_a, answer_b, day_number):
     # Show answers
     print(f"Day {int(day_number)}a: {answer_a if answer_a else '-'}")
     print(f"Day {int(day_number)}b: {answer_b if answer_b else '-'}")
-    return
-
-
-@app.cell
-def _():
-    2**3
-    return
-
-
-@app.cell
-def _(math):
-    math.comb(4, 2)
     return
 
 
