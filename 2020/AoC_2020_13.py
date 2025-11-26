@@ -9,10 +9,11 @@ def _():
     # Import statements
     import os
     import numpy as np
+    import math
 
     # Settings
     sample = True # Fill in False, or the sample number (True and 1 are the same)
-    return os, sample
+    return math, os, sample
 
 
 @app.cell
@@ -21,6 +22,9 @@ def _(os, sample):
     day_number = os.path.basename(__file__).split(sep=".")[0].split(sep="_")[-1]
     def post_process(data):
         # TODO: problem-specific post-processing
+        data = [d.strip() for d in data]
+        data = int(data[0]), data[1].split(',')
+        print(data)
         return data
 
     def load_input(sample=False):
@@ -33,19 +37,25 @@ def _(os, sample):
 
 
 @app.cell
-def _(input_data):
+def _(input_data, math):
     def problem_a(data):
-        # TODO solve problem a
-        return None
+        minutes = [(int(x), int(x) - data[0]%int(x)) for x in data[1] if x.isdigit()]
+        return math.prod(min(minutes, key=lambda item: item[1]))
     answer_a = problem_a(input_data)
     return (answer_a,)
 
 
 @app.cell
 def _(input_data):
+    def test_condition(dep_sched, t):
+        return sum([(t+i)%int(d) for i,d in enumerate(dep_sched) if d.isdigit()]) == 0
+
     def problem_b(data):
-        # TODO solve problem b
-        return None
+        t = 0
+        step_size = int(data[1][0])
+        while not test_condition(data[1], t):
+            t += step_size
+        return t
     answer_b = problem_b(input_data)
     return (answer_b,)
 
