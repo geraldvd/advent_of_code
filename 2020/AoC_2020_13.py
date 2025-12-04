@@ -51,11 +51,21 @@ def _(input_data):
         return sum([(t+i)%int(d) for i,d in enumerate(dep_sched) if d.isdigit()]) == 0
 
     def problem_b(data):
-        t = 0
-        step_size = int(data[1][0])
-        while not test_condition(data[1], t):
-            t += step_size
-        return t
+        # t = 0
+        # step_size = int(data[1][0])
+        # while not test_condition(data[1], t):
+        #     t += step_size
+        # return t
+        relevant_data = []
+        for i, d in enumerate(data[1]):
+            if d.isdigit():
+                relevant_data.append((i, int(d)))
+        print(relevant_data)
+        t_step = max(relevant_data, key=lambda x: x[1])[1]
+        for t in range(0, 1000, 1):
+            for rd in relevant_data:
+                print((t+rd[0])%rd[1], end=" ")
+            print()
     answer_b = problem_b(input_data)
     return (answer_b,)
 
