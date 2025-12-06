@@ -75,11 +75,23 @@ def _(input_data, math, np):
         print("Tiles per overlapping edge count:", {k:len(v) for k, v in invert_dict(edge_counts).items()})
         return math.prod(invert_dict(edge_counts)[12])
     answer_a = problem_a(input_data)
-    return answer_a, generate_edges
+    return answer_a, extract_sides_bin, generate_edges
 
 
 @app.cell
-def _(generate_edges, input_data, np):
+def _(extract_sides_bin, generate_edges, input_data, np):
+    def get_single_neighbour(tile, edge, edges, edge_lookup):
+        neighbour = [e for e in edge_lookup[edge] if e != tile] if len(edge_lookup[edge])>1 else None
+        print(neighbour)
+
+    def get_neighbours2(k, tile, edges, edge_lookup):
+        top, bottom, left, right = extract_sides_bin(tile)[:4]
+        neighbour = [e for e in edge_lookup[top] if e != k][0] if len(edge_lookup[top])>1 else None
+        print(top, bottom, left, right)
+        print(neighbour)
+        if neighbour:
+            print(edges[neighbour])
+
     def get_neighbours(tile, edges, edge_lookup):
         neighbours = []
         for edge in edges[tile]:
@@ -123,7 +135,7 @@ def _(generate_edges, input_data, np):
         #         t_id, t_flipped = tile_coords[(x, y)]
         #         for xi in [x-1, x+1]:
         #             for yi in [y-1, y+1]:
-                    
+
         #         for i, edge in enumerate(edges[t_id]):
         #             match i:
         #                 # UP
@@ -133,11 +145,17 @@ def _(generate_edges, input_data, np):
         #                     if len(neighbours):
         #                         tile_coords[(xi, yi+1)] = (neighbours[0], False)
         #                         new_adj_tiles.append((xi, yi+1))
-                    
-                
+
+
         #         print([edge_lookup[e] for e in edges[t_id]])
         #     break
-        
+        print()
+        for k in edges.keys():
+            print(k, edges[k])
+            for e in edges[k]:
+                get_single_neighbour(k, e, edges, edge_lookup)
+        print()
+        get_neighbours2(2311, data[2311], edges, edge_lookup)
         return None
     answer_b = problem_b(input_data)
     return (answer_b,)
