@@ -12,7 +12,7 @@ def _():
     import math
 
     # Settings
-    sample = True # Fill in False, or the sample number (True and 1 are the same)
+    sample = False # Fill in False, or the sample number (True and 1 are the same)
     return math, os, sample
 
 
@@ -21,10 +21,11 @@ def _(os, sample):
     # Get problem input
     day_number = os.path.basename(__file__).split(sep=".")[0].split(sep="_")[-1]
     def post_process(data):
-        # TODO: problem-specific post-processing
+        #Problem-specific post-processing
         data = [d.strip() for d in data]
         data = int(data[0]), data[1].split(',')
         print(data)
+        print(len(data[1]))
         return data
 
     def load_input(sample=False):
@@ -39,33 +40,43 @@ def _(os, sample):
 @app.cell
 def _(input_data, math):
     def problem_a(data):
+        # Calculate tuple of bus IDs and wait time from arrival time at bus stop.
         minutes = [(int(x), int(x) - data[0]%int(x)) for x in data[1] if x.isdigit()]
+        # Return bus ID multiplied with min. num minutes to wait (that's the minimum of the modulo calculated above).
         return math.prod(min(minutes, key=lambda item: item[1]))
     answer_a = problem_a(input_data)
     return (answer_a,)
 
 
 @app.cell
-def _(input_data):
-    def test_condition(dep_sched, t):
-        return sum([(t+i)%int(d) for i,d in enumerate(dep_sched) if d.isdigit()]) == 0
+def _(input_data, math):
+    def test_times(start, bus_intervals, offsets, increment=1):
+        num = start
+        while sum([(num+offsets[i])%bus_intervals[i] for i, _ in enumerate(bus_intervals)]):
+            num += increment
+        return num
 
     def problem_b(data):
-        # t = 0
-        # step_size = int(data[1][0])
-        # while not test_condition(data[1], t):
-        #     t += step_size
-        # return t
-        relevant_data = []
-        for i, d in enumerate(data[1]):
-            if d.isdigit():
-                relevant_data.append((i, int(d)))
-        print(relevant_data)
-        t_step = max(relevant_data, key=lambda x: x[1])[1]
-        for t in range(0, 1000, 1):
-            for rd in relevant_data:
-                print((t+rd[0])%rd[1], end=" ")
-            print()
+        '''
+        Hint used: https://www.reddit.com/r/adventofcode/comments/kc60ri/2020_day_13_can_anyone_give_me_a_hint_for_part_2/gfpqdm3/
+        Underlying theorem: Chinese Remainder Theorem.
+        '''
+        # Extract bus intervals and offsets (i.e., T+offset needs to be used to find T)
+        bus_intervals = [int(x) for x in data[1] if x.isdigit()]
+        offsets = [i for i, x in enumerate(data[1]) if x.isdigit()]
+        print(bus_intervals, offsets)
+
+        # Start searching at 0. First use 2 buses, and update the starting point.
+        # The increment is always the product of the bus intervals (valid because they are co-primes).
+        # This means the jumps will get larger, to reduce search space.
+        # For the increment, I needed the hint from Reddit.
+        num = 0
+        for i in range(1, len(bus_intervals)):
+            increment = math.prod(bus_intervals[:i])
+            num = test_times(num, bus_intervals[:i+1], offsets[:i+1], increment)
+            print(f"First valid T for buses {', '.join([str(n) for n in bus_intervals[:i+1]])}: {num} "\
+                  f"(=next starting num, interval is {math.prod(bus_intervals[:i+1])})")
+        return num
     answer_b = problem_b(input_data)
     return (answer_b,)
 
