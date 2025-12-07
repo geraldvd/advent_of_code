@@ -62,12 +62,13 @@ def _(input_data):
         # The crab selects a new current cup: the cup which is immediately clockwise of the current cup.
         # Note: current cup is always placed at the front (unlike the example)
         return cups[4:dest_idx+1] + pick_ups + cups[dest_idx+1:] + cups[:1]
-        
+
 
     def problem_a(data):
         cups = data.copy()
         for i in range(100):
             cups = move(cups)
+            print(cups)
         # Resequence such that the cup after 1 comes first, and does not include 1 at the end
         return ''.join([str(i) for i in cups[cups.index(1)+1:] + cups[:cups.index(1)]])
     answer_a = problem_a(input_data)
@@ -80,6 +81,7 @@ def _(input_data):
         # cups = data.copy() + list(range(max(data)+1, 1000001-len(data)))
         # for i in range(1000):
             # cups = move(cups)
+        print(data)
         return None
     answer_b = problem_b(input_data)
     return (answer_b,)

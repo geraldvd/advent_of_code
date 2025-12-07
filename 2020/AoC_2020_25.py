@@ -11,7 +11,7 @@ def _():
     import numpy as np
 
     # Settings
-    sample = False # Fill in False, or the sample number (True and 1 are the same)
+    sample = True # Fill in False, or the sample number (True and 1 are the same)
     return os, sample
 
 
