@@ -12,6 +12,8 @@ The following years are available:
 - 2022: https://adventofcode.com/2022
 - 2023: https://adventofcode.com/2023
 - 2024: https://adventofcode.com/2024 (completed in Jupyter with 50 stars)
-- 2025: https://adventofcode.com/2025 (completed in Marimo with 24 stars)
+- 2025: https://adventofcode.com/2025 (completed in Marimo with 24 stars on 27 December 2025)
 
 Problems are completed using Jupyter (in Jupyterhub) and using Marimo (plain Python files).
+
+After completing a year, a screen recording is made with `CMD-SHIFT-5`, to record a section of the screen (see 2024 or 2025 folders). Then turned into gif with ffmpeg: `ffmpeg -i input.mov -vf "fps=10,scale=900:-1:flags=lanczos" output.gif`.
