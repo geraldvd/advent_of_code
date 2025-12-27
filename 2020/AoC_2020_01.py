@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.0"
+__generated_with = "0.18.4"
 app = marimo.App(width="medium")
 
 
@@ -11,7 +11,7 @@ def _():
     import numpy as np
 
     # Settings
-    sample = False # Fill in False, or the sample number (True and 1 are the same)
+    sample = False  # Fill in False, or the sample number (True and 1 are the same)
     return np, os, sample
 
 
@@ -19,15 +19,23 @@ def _():
 def _(os, sample):
     # Get problem input
     day_number = os.path.basename(__file__).split(sep=".")[0].split(sep="_")[-1]
+
+
     def post_process(data):
         # Problem-specific post-processing
         data = [int(d) for d in data]
         return data
 
+
     def load_input(sample=False):
         curdir = "/".join(os.path.abspath(__file__).split("/")[:-1]) + "/"
-        filename = curdir + (f"input_{day_number}_sample{'_'+str(sample) if int(sample)>1 else ''}.txt" if sample else f"input_{day_number}.txt")
+        filename = curdir + (
+            f"input_{day_number}_sample{'_' + str(sample) if int(sample) > 1 else ''}.txt"
+            if sample
+            else f"input_{day_number}.txt"
+        )
         return post_process(open(filename, "r").readlines())
+
 
     input_data = load_input(sample)
     return day_number, input_data
@@ -37,11 +45,15 @@ def _(os, sample):
 def _(input_data, np):
     def problem_a(data):
         # Create square matrix with repeated data columns
-        expense_matrix = np.array(data*len(data)).reshape((len(data), len(data)))
+        expense_matrix = np.array(data * len(data)).reshape((len(data), len(data)))
         # Find coordinates of elements where sum is 2020 (note: 2 results, inversed indices)
-        idx_matching = np.argwhere(expense_matrix.transpose() + expense_matrix == 2020)[0]
+        idx_matching = np.argwhere(
+            expense_matrix.transpose() + expense_matrix == 2020
+        )[0]
         # Return product of the data points at the indices
         return data[idx_matching[0]] * data[idx_matching[1]]
+
+
     answer_a = problem_a(input_data)
     return (answer_a,)
 
@@ -53,8 +65,10 @@ def _(input_data):
         for i in data:
             for j in data:
                 for k in data:
-                    if i+j+k == 2020:
-                        return i*j*k
+                    if i + j + k == 2020:
+                        return i * j * k
+
+
     answer_b = problem_b(input_data)
     return (answer_b,)
 

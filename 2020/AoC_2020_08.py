@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.0"
+__generated_with = "0.18.4"
 app = marimo.App(width="medium")
 
 
@@ -11,7 +11,7 @@ def _():
     import numpy as np
 
     # Settings
-    sample = False # Fill in False, or the sample number (True and 1 are the same)
+    sample = False  # Fill in False, or the sample number (True and 1 are the same)
     return os, sample
 
 
@@ -19,17 +19,25 @@ def _():
 def _(os, sample):
     # Get problem input
     day_number = os.path.basename(__file__).split(sep=".")[0].split(sep="_")[-1]
+
+
     def post_process(data):
         # Problem-specific post-processing
-        data = [d.strip().split(' ') for d in data]
+        data = [d.strip().split(" ") for d in data]
         data = [(d[0], int(d[1])) for d in data]
         print(data)
         return data
 
+
     def load_input(sample=False):
         curdir = "/".join(os.path.abspath(__file__).split("/")[:-1]) + "/"
-        filename = curdir + (f"input_{day_number}_sample{'_'+str(sample) if int(sample)>1 else ''}.txt" if sample else f"input_{day_number}.txt")
+        filename = curdir + (
+            f"input_{day_number}_sample{'_' + str(sample) if int(sample) > 1 else ''}.txt"
+            if sample
+            else f"input_{day_number}.txt"
+        )
         return post_process(open(filename, "r").readlines())
+
 
     input_data = load_input(sample)
     return day_number, input_data
@@ -45,19 +53,22 @@ def _(input_data):
         while idx not in indices_processed and idx < len(program):
             indices_processed.append(idx)
             match program[idx][0]:
-                case 'nop':
+                case "nop":
                     idx += 1
-                case 'acc':
+                case "acc":
                     accumulator += program[idx][1]
                     idx += 1
-                case 'jmp':
+                case "jmp":
                     idx += program[idx][1]
         # Return accumulator for both problems and (final) idx for problem b
         return accumulator, idx
 
-    def problem_a(data):    
+
+    def problem_a(data):
         accumulator, _ = execute_program(data)
         return accumulator
+
+
     answer_a = problem_a(input_data)
     return answer_a, execute_program
 
@@ -66,15 +77,17 @@ def _(input_data):
 def _(execute_program, input_data):
     def problem_b(data):
         for idx, d in enumerate(data):
-            if d[0] in ['nop', 'jmp']:
+            if d[0] in ["nop", "jmp"]:
                 # Swap single 'nop' or 'jmp' and run program
-                data[idx] = ('nop' if d[0]=='jmp' else 'jmp', d[1])
+                data[idx] = ("nop" if d[0] == "jmp" else "jmp", d[1])
                 accumulator, final_idx = execute_program(data)
                 # Return data in original state to try another swap
                 data[idx] = d
                 # Right swap found if idx reaches the end of the program
                 if final_idx >= len(data):
                     return accumulator
+
+
     answer_b = problem_b(input_data)
     return (answer_b,)
 
