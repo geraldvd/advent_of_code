@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.0"
+__generated_with = "0.18.4"
 app = marimo.App(width="medium")
 
 
@@ -11,7 +11,7 @@ def _():
     import numpy as np
 
     # Settings
-    sample = False # Fill in False, or the sample number (True and 1 are the same)
+    sample = False  # Fill in False, or the sample number (True and 1 are the same)
     return os, sample
 
 
@@ -19,18 +19,26 @@ def _():
 def _(os, sample):
     # Get problem input
     day_number = os.path.basename(__file__).split(sep=".")[0].split(sep="_")[-1]
+
+
     def post_process(data):
         # Problem-specific post-processing
         data = [(d.strip()[0], int(d.strip()[1:])) for d in data]
         # Right turns of dial: positive ints, left turns: negative ints
-        data = [d[1] if d[0]=='R' else -d[1] for d in data]
+        data = [d[1] if d[0] == "R" else -d[1] for d in data]
         print(data)
         return data
 
+
     def load_input(sample=False):
         curdir = "/".join(os.path.abspath(__file__).split("/")[:-1]) + "/"
-        filename = curdir + (f"input_{day_number}_sample{'_'+str(sample) if int(sample)>1 else ''}.txt" if sample else f"input_{day_number}.txt")
+        filename = curdir + (
+            f"input_{day_number}_sample{'_' + str(sample) if int(sample) > 1 else ''}.txt"
+            if sample
+            else f"input_{day_number}.txt"
+        )
         return post_process(open(filename, "r").readlines())
+
 
     input_data = load_input(sample)
     return day_number, input_data
@@ -52,6 +60,8 @@ def _(input_data):
             if loc == 0:
                 zero_count += 1
         return zero_count
+
+
     answer_a = problem_a(input_data)
     return (answer_a,)
 
@@ -67,18 +77,21 @@ def _(input_data):
             while clicks != 0:
                 if clicks < 0:
                     loc -= 1
-                    if loc < 0: 
+                    if loc < 0:
                         loc += 100
                     clicks += 1
                     if loc == 0:
                         zero_count += 1
                 if clicks > 0:
                     loc += 1
-                    if loc > 99: loc -= 100
+                    if loc > 99:
+                        loc -= 100
                     clicks -= 1
                     if loc == 0:
                         zero_count += 1
         return zero_count
+
+
     answer_b = problem_b(input_data)
     return (answer_b,)
 

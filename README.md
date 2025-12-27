@@ -11,7 +11,7 @@ The following years are available:
 - 2021: https://adventofcode.com/2021
 - 2022: https://adventofcode.com/2022
 - 2023: https://adventofcode.com/2023
-- 2024: https://adventofcode.com/2024 (completed with 50 stars)
-- 2025: https://adventofcode.com/2025
+- 2024: https://adventofcode.com/2024 (completed in Jupyter with 50 stars)
+- 2025: https://adventofcode.com/2025 (completed in Marimo with 24 stars)
 
 Problems are completed using Jupyter (in Jupyterhub) and using Marimo (plain Python files).

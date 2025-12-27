@@ -1,0 +1,1 @@
+![Advent of Code 2024](AoC2024.gif)

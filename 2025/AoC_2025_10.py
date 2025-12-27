@@ -11,35 +11,46 @@ def _():
     import numpy as np
     import re
     import time
-    import sys
     import sympy as sp
 
     # Settings
-    sample = False # Fill in False, or the sample number (True and 1 are the same)
-    return np, os, re, sample, sp
+    sample = False  # Fill in False, or the sample number (True and 1 are the same)
+    return np, os, re, sample, sp, time
 
 
 @app.cell
 def _(os, re, sample):
     # Get problem input
     day_number = os.path.basename(__file__).split(sep=".")[0].split(sep="_")[-1]
+
+
     def post_process(data):
         # Problem-specific post-processing
         machines = []
         for d in data:
             res = re.findall(r"\[([\.#]+)\] ([\(\)\d\,\s]+)\{([\d\,]+)\}", d)[0]
             button_wiring = re.findall(r"\(([\d\,]+)\)\s+", res[1])
-            machine = {"lights": [1 if s == "#" else 0 for s in res[0]], \
-                       "button_wiring": [tuple([int(i) for i in b.split(',')]) for b in button_wiring], \
-                       "joltage_req": [int(r) for r in res[2].split(',')]}
+            machine = {
+                "lights": [1 if s == "#" else 0 for s in res[0]],
+                "button_wiring": [
+                    tuple([int(i) for i in b.split(",")]) for b in button_wiring
+                ],
+                "joltage_req": [int(r) for r in res[2].split(",")],
+            }
             machines.append(machine)
         print(machines)
         return machines
 
+
     def load_input(sample=False):
         curdir = "/".join(os.path.abspath(__file__).split("/")[:-1]) + "/"
-        filename = curdir + (f"input_{day_number}_sample{'_'+str(sample) if int(sample)>1 else ''}.txt" if sample else f"input_{day_number}.txt")
+        filename = curdir + (
+            f"input_{day_number}_sample{'_' + str(sample) if int(sample) > 1 else ''}.txt"
+            if sample
+            else f"input_{day_number}.txt"
+        )
         return post_process(open(filename, "r").readlines())
+
 
     input_data = load_input(sample)
     return day_number, input_data
@@ -48,10 +59,10 @@ def _(os, re, sample):
 @app.cell
 def _(input_data):
     def compress_list(seq):
-        '''Duplicates in list can be removed, since it's only toggle switches. Sort at the end.
+        """Duplicates in list can be removed, since it's only toggle switches. Sort at the end.
         Example: [1,2,2,2,3,3,4] --> [1,2,4] (i.e., pairs of 2 cancel eachother)
-        '''
-        toggle_dict = {s: seq.count(s)%2 for s in set(seq)}
+        """
+        toggle_dict = {s: seq.count(s) % 2 for s in set(seq)}
         seq_out = []
         for k in sorted(toggle_dict.keys()):
             seq_out += [k] * toggle_dict[k]
@@ -63,8 +74,9 @@ def _(input_data):
         for machine in data:
             # Determine which lights need to be toggled an odd number of times
             # Run compress_list to allow to compare later with outcomes of button presses.
-            lights_to_toggle = compress_list([idx for idx, l in enumerate(machine["lights"]) if l > 0])
-
+            lights_to_toggle = compress_list(
+                [idx for idx, l in enumerate(machine["lights"]) if l > 0]
+            )
 
             # Press each button 1 time and store the result in a set (to remove duplicates)
             button_sequences = set()
@@ -87,143 +99,123 @@ def _(input_data):
             total_button_presses += button_presses
 
         return total_button_presses
+
+
     answer_a = problem_a(input_data)
     return (answer_a,)
 
 
 @app.cell
-def _(input_data, np, sp):
-    def increase_joltages(cur_joltages, added_button_wiring):
-        new_joltages = list(cur_joltages)
-        for bw in added_button_wiring:
-            new_joltages[bw] += 1
-        return tuple(new_joltages)
+def _(input_data, np, sp, time):
+    def optimize_linear_equation(d):
+        t0 = time.time()
+        # Create A and b for linear algebra format Ax=b
+        m, n = len(d["joltage_req"]), len(d["button_wiring"])
+        A = np.zeros((m, n), dtype=np.int64)
+        for idx, bw in enumerate(d["button_wiring"]):
+            for bwi in bw:
+                A[bwi, idx] = 1
+        b = np.array(d["joltage_req"], dtype=np.int64).reshape(-1, 1)
+
+        # Convert to sympy system for solving symbolically
+        A_sp = sp.Matrix(A)
+        b_sp = sp.Matrix(b)
+
+        # Starting point (INF) and constants
+        best_solution = 1e100
+        ERR = 1e-4
+        LOWER_BOUND = 0
+        UPPER_BOUND = 200
+
+        # Create xi variables based; number of vars dependent on rank of the system.
+        x_s = sp.symbols(f"x0:{A.shape[1]}", integer=True)
+
+        # Solve the linear system and assert there is a solution (which is the case for all advent of code problems)
+        sol = tuple(sp.linsolve((A_sp, b_sp), x_s))
+        assert len(sol) > 0, (
+            "There should at least be a solution to the system of linear equations."
+        )
+        sol = sol[0]
+
+        # Extract the free variables. I.e., the one that need to be optimized (brute force below)
+        free_vars = [v for v, expr in zip(x_s, sol) if expr == v]
+
+        # To simplify the brute force below, assume there is a max of 3 variables (which is the case for my problem set)
+        assert len(free_vars) <= 3, "Assumed max 3 free variables"
+
+        # Unique solution, so no free variables
+        if not len(free_vars):
+            return sum(sol)
+        # Multiple solutions, dependent on variables in free_vars
+        else:
+            # Create a function that's efficient to evaluate when looping over many possible values
+            func = sp.lambdify(free_vars, sol, modules="sympy")
+
+        # Single variable
+        if len(free_vars) == 1:
+            for u in range(LOWER_BOUND, UPPER_BOUND):
+                vals = [round(i, 1) for i in func(u)]
+                if (
+                    all(abs(int(val) - val) < ERR and val >= 0 for val in vals)
+                    and sum(vals) < best_solution
+                ):
+                    best_solution = sum(vals)
+            return best_solution
+        # 2 variables
+        elif len(free_vars) == 2:
+            for u in range(LOWER_BOUND, UPPER_BOUND):
+                for v in range(LOWER_BOUND, UPPER_BOUND):
+                    vals = [round(i, 1) for i in func(u, v)]
+                    if (
+                        all(abs(int(val) - val) < ERR and val >= 0 for val in vals)
+                        and sum(vals) < best_solution
+                    ):
+                        best_solution = sum(vals)
+            return best_solution
+        # 3 variables; assertion above guarantees this is the only option left.
+        else:
+            for u in range(LOWER_BOUND, UPPER_BOUND):
+                for v in range(LOWER_BOUND, UPPER_BOUND):
+                    for w in range(LOWER_BOUND, UPPER_BOUND):
+                        vals = [round(i, 1) for i in func(u, v, w)]
+                        if (
+                            all(
+                                abs(int(val) - val) < ERR and val >= 0
+                                for val in vals
+                            )
+                            and sum(vals) < best_solution
+                        ):
+                            best_solution = sum(vals)
+            return best_solution
 
 
     def problem_b(data):
-        # total_button_presses = 0
-        # for machine in data[:2]:
-        #     t0 = time.time()
-        #     loop_count = 0
-        #     # Determine which lights need to be toggled an odd number of times
-        #     # Run compress_list to allow to compare later with outcomes of button presses.
-        #     output_joltages = tuple(machine["joltage_req"])
-
-
-        #     # Press each button 1 time and store the result in a set (to remove duplicates)
-        #     button_sequences = set()
-        #     for bw in machine["button_wiring"]:
-        #         # Run compress_list to always get the same result
-        #         initial_joltage = [0] * len(output_joltages)
-        #         button_sequences.add(increase_joltages(initial_joltage, bw))
-        #         loop_count += 1
-
-        #     # Keep incrementing button presses, until a sequence is found that works
-        #     button_presses = 1
-        #     while output_joltages not in button_sequences:
-        #         button_presses += 1
-        #         # Add new compressed sequence to set (avoiding duplicates) for every button sequence
-        #         new_button_sequences = set()
-        #         for bs in button_sequences:
-        #             for bw in machine["button_wiring"]:
-        #                 new_joltages = increase_joltages(bs, bw)
-        #                 loop_count += 1
-        #                 # Try to reduce set size
-        #                 if not sum([new_joltage>output_joltages[idx] for idx, new_joltage in enumerate(new_joltages)]):
-        #                     new_button_sequences.add(new_joltages)
-        #                     if new_joltages == output_joltages:
-        #                         break
-        #         button_sequences = new_button_sequences.copy()
-        #     print(f"list length: {len(new_button_sequences)}, loop count: {loop_count}, " \
-        #           f"size in memory: {sys.getsizeof(new_button_sequences)/1000} kB, took {time.time()-t0} sec.")
-
-        #     # Button presses found, add to total
-        #     total_button_presses += button_presses
-        #     # print(button_presses, len(button_sequences))
-
-        # return total_button_presses
+        t0 = time.time()
         sum_solution = 0
         total_invalid = 0
+
         for d_idx, d in enumerate(data):
-            # Create A and b for linear algebra format Ax=b
-            m, n = len(d['joltage_req']), len(d['button_wiring'])
-            A = np.zeros((m, n))
-            for idx, bw in enumerate(d['button_wiring']):
-                for bwi in bw:
-                    A[bwi, idx] = 1
-            b = np.array(d['joltage_req']).reshape(-1, 1)
-
-            # Compute row reduced echelon form of [A|b].
-            A_sp = sp.Matrix(A)
-            b_sp = sp.Matrix(b)
-            Ab_sp = A_sp.row_join(b_sp)
-            Ab_rref, pivot_cols = Ab_sp.rref()
-            Ab_rref = np.array(Ab_rref).astype(np.float64)
-
-            # Pivot columns are columns that are fixed to a single x.
-            # Free cols defines which columns are free variables (and are any column that's not pivot)
-            free_cols = [c for c in range(Ab_sp.shape[1]-1) if c not in pivot_cols]
-
-            # The entire solution space for x is: x = a + s[0]*f[0] + (...) + s[j]*f[j]
-            # Where a is defined by the pivot columns and f[j] by the number of free variables
-            a = n * [0]
-            f = np.zeros((len(free_cols), n))
-            counter = 0
-            for idx in range(n):
-                if idx in pivot_cols:
-                    a[idx] = Ab_rref[counter, -1]
-                    for f_idx in range(len(free_cols)):
-                        f[f_idx, idx] = -Ab_rref[counter, free_cols[f_idx]]
-                    counter += 1
-            for idx, f_idx in enumerate(free_cols):
-                f[idx, f_idx] = 1
-
-            # Convert to numpy array and list of numpy arrays
-            a = np.array(a).reshape(-1, 1)
-
-            # Find optimal solution by adjusting s[j], until minimum x is found.
-            # num_iter = 1000 // (len(f)+1)
-            num_iter = 100 if len(f) == 3 else 1000
-            best_solution = 1e100
-            for i in range(num_iter**len(f)):
-                mult = np.array([int(i/num_iter**j)%num_iter for j in range(len(f))]).reshape(-1, 1)
-                res = a + np.dot(f.T, mult)
-                if np.abs(res).sum() == res.sum() and np.round(res).sum() == res.sum() and res.sum() < best_solution:
-                    best_solution = res.sum()
+            best_solution = optimize_linear_equation(d)
             sum_solution += best_solution
             if best_solution > 1e99:
                 total_invalid += 1
-            print(f"{d_idx+1}/{len(data)}", best_solution)
-            if len(f) == 3:
-                print(a)
-                print(f)
-                print(num_iter, mult)
-                # break
+            print(f"{d_idx + 1}/{len(data)}", best_solution)
         print()
-        print(sum_solution, total_invalid)
+        print(
+            f"Solved in {time.time() - t0} seconds. Solution: {sum_solution} with {total_invalid} invalid results."
+        )
+        return sum_solution
 
 
-    answer_b = problem_b(input_data) # 19576 is too high, tried with 300 tries
+    answer_b = problem_b(input_data)
     return (answer_b,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(answer_a, answer_b, day_number):
     # Show answers
     print(f"Day {int(day_number)}a: {answer_a if answer_a else '-'}")
     print(f"Day {int(day_number)}b: {answer_b if answer_b else '-'}")
-    return
-
-
-@app.cell
-def _(np):
-    test = np.ones((1,1))
-    np.dot(np.empty((0,0)), test)
-    return
-
-
-@app.cell
-def _():
     return
 
 
