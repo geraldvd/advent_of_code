@@ -11,7 +11,7 @@ def _():
     import numpy as np
 
     # Settings
-    sample = True  # Fill in False, or the sample number (True and 1 are the same)
+    sample = False  # Fill in False, or the sample number (True and 1 are the same)
     return os, sample
 
 
@@ -45,130 +45,116 @@ def _(os, sample):
 @app.cell
 def _(input_data):
     def parse_direction_string(s):
-        return (
-            s.replace("se", "se,")
-            .replace("sw", "sw,")
-            .replace("nw", "nw,")
-            .replace("ne", "ne,")
-            .replace("ws", "w,s")
-            .replace("wn", "w,n")
-            .replace("es", "e,s")
-            .replace("en", "e,n")
-            .replace("ew", "e,w")
-            .replace("we", "w,e")
-            .replace("ee", "e,e")
-            .replace("ww", "w,w")
-            .replace("ee", "e,e")
-            .replace("ww", "w,w")
-            .strip(",")
-            .split(",")
-        )
+        """convert string of directions without delimiter to delimited list"""
+        directions = []
+        i = 0
+        while i < len(s):
+            # If it starts with n or s, it means it's ne/nw/se/sw.
+            if s[i] in ["n", "s"]:
+                directions.append(s[i : i + 2])
+                i += 2
+            # Else it must be e or w
+            else:
+                directions.append(s[i])
+                i += 1
+        return directions
 
 
-    def norm_tile_tuple(tile):
-        min_ns = min(tile[0], tile[2])
-        min_ew = min(tile[1], tile[3])
-        return (
-            tile[0] - min_ns,
-            tile[1] - min_ew,
-            tile[2] - min_ns,
-            tile[3] - min_ew,
-        )
+    def direction_to_coordinate(d):
+        """Convert directions to coordinates (x, y). For a hexagon, the nett displacement stays the same.
+        I.e., for E and W, it is 1 and for NE/NW/SE/SW it is 0.5. Doubled here to stick to integer values."""
+        match d:
+            case "e":
+                return (2, 0)
+            case "w":
+                return (-2, 0)
+            case "ne":
+                return (1, 1)
+            case "nw":
+                return (-1, 1)
+            case "se":
+                return (1, -1)
+            case "sw":
+                return (-1, -1)
+            case _:
+                print("Error: this direction should not exist.")
 
 
-    def tile2tuple(tile):
-        """Convert dict to (n, e, s, w)"""
-        return norm_tile_tuple((tile["n"], tile["e"], tile["s"], tile["w"]))
+    def calculate_tile_coordinate(directions):
+        """Convert sequence of directions to coordinates of a tile"""
+        c = (0, 0)
+        for d in directions:
+            move = direction_to_coordinate(d)
+            c = (c[0] + move[0], c[1] + move[1])
+        return c
 
 
-    def netto_move(moves):
-        dir_count = {"e": 0, "n": 0, "s": 0, "w": 0}
-        for m in moves:
-            for d in m:
-                dir_count[d] += 2 // len(m)
-        pairs = [("n", "s"), ("e", "w")]
-        for p1, p2 in pairs:
-            min_p1p2 = min(dir_count[p1], dir_count[p2])
-            dir_count[p1] -= min_p1p2
-            dir_count[p2] -= min_p1p2
-        return dir_count
+    def calculate_black_tiles(data):
+        """Create a set of all black tiles. Needed for both problem a and problem b."""
+        black_tiles = set()
+        for d in data:
+            moves = parse_direction_string(d)
+            tile = calculate_tile_coordinate(moves)
+            if tile in black_tiles:
+                black_tiles.remove(tile)
+            else:
+                black_tiles.add(tile)
+        return black_tiles
 
 
     def problem_a(data):
-        tiles = {}
-        for d in data:
-            moves = parse_direction_string(d)
-            nm = netto_move(moves)
-            hash_nm = tile2tuple(nm)
-            if hash_nm not in tiles.keys():
-                tiles[hash_nm] = 0
-            tiles[hash_nm] += 1
-        print(tiles)
-        return sum([i % 2 for i in tiles.values()])
+        black_tiles = calculate_black_tiles(data)
+        return len(black_tiles)
 
 
     answer_a = problem_a(input_data)
-    return (
-        answer_a,
-        netto_move,
-        norm_tile_tuple,
-        parse_direction_string,
-        tile2tuple,
-    )
+    return answer_a, calculate_black_tiles
 
 
 @app.cell
-def _(
-    input_data,
-    netto_move,
-    norm_tile_tuple,
-    parse_direction_string,
-    tile2tuple,
-):
+def _(calculate_black_tiles, input_data):
     def get_neighbours(tile):
-        """Return neighbour tiles: nw (n+1, w+1), ne (n+1, e+1), sw (s+1, w+1), se (s+1, e+1), e (e+2), w (w+2)"""
+        """Compute 6 neighbours of a given tile (x, y)."""
         return [
-            norm_tile_tuple((tile[0] + 1, tile[1], tile[2], tile[3] + 1)),
-            norm_tile_tuple((tile[0] + 1, tile[1] + 1, tile[2], tile[3])),
-            norm_tile_tuple((tile[0], tile[1], tile[2] + 1, tile[3] + 1)),
-            norm_tile_tuple((tile[0], tile[1] + 1, tile[2] + 1, tile[3])),
-            norm_tile_tuple((tile[0], tile[1] + 2, tile[2], tile[3])),
-            norm_tile_tuple((tile[0], tile[1], tile[2], tile[3] + 2)),
+            (tile[0] + 2, tile[1]),  # e
+            (tile[0] - 2, tile[1]),  # w
+            (tile[0] + 1, tile[1] + 1),  # ne
+            (tile[0] - 1, tile[1] + 1),  # nw
+            (tile[0] + 1, tile[1] - 1),  # se
+            (tile[0] - 1, tile[1] - 1),  # sw
         ]
 
 
     def problem_b(data):
-        # Short way to do problem a again (True is black, False is white)
-        tiles = {}
-        for d in data:
-            tile = tile2tuple(netto_move(parse_direction_string(d)))
-            tiles[tile] = True if tile not in tiles.keys() else not (tiles[tile])
-        print(sum(tiles.values()))
-
-        # Simulate 100 days
-        for day in range(10):
-            new_tiles = tiles.copy()
-            for t in tiles.keys():
-                # Get neighbours and count black ones. Also, add to tiles if not added yet.
-                neighbours = get_neighbours(t)
-                neighbours_black_count = 0
-                for n in neighbours:
-                    if n not in tiles.keys():
-                        new_tiles[n] = False
-                    if new_tiles[n]:
-                        neighbours_black_count += 1
+        # Starting point is where problem a left of
+        black_tiles = calculate_black_tiles(data)
+        for day in range(100):
+            new_black_tiles = set()
+            for bt in black_tiles:
+                neighbours = get_neighbours(bt)
                 # Any black tile with zero or more than 2 black tiles immediately adjacent to it is flipped to white.
-                if tiles[t] and (
-                    neighbours_black_count == 0 or neighbours_black_count > 2
-                ):
-                    new_tiles[t] = not (tiles[t])
-                # Any white tile with exactly 2 black tiles immediately adjacent to it is flipped to black.
-                if not tiles[t] and neighbours_black_count == 2:
-                    new_tiles[t] = not (tiles[t])
-            tiles = new_tiles.copy()
-            print(f"Day {day + 1}: {sum(tiles.values())}")
+                num_black_neighbours = sum(
+                    [1 if n in black_tiles else 0 for n in neighbours]
+                )
+                if not (num_black_neighbours == 0 or num_black_neighbours > 2):
+                    new_black_tiles.add(bt)
 
-        return None
+                # Any white tile with exactly 2 black tiles immediately adjacent to it is flipped to black.
+                # White tiles are not directly stored, so instead just look at all neighbours.
+                # (Any tile outside that cannot apply to the conditions.)
+                for n in neighbours:
+                    # Consider tile n to be the one that needs to be checked, if it is white.
+                    if n not in black_tiles:
+                        # Get neighbours of this new white tile
+                        neighbours_2 = get_neighbours(n)
+                        num_black_neighbours = sum(
+                            [1 if n2 in black_tiles else 0 for n2 in neighbours_2]
+                        )
+                        if num_black_neighbours == 2:
+                            new_black_tiles.add(n)
+            black_tiles = new_black_tiles.copy()
+            print(f"Day {day + 1}: {len(black_tiles)}")
+        return len(black_tiles)
 
 
     answer_b = problem_b(input_data)
@@ -180,30 +166,6 @@ def _(answer_a, answer_b, day_number):
     # Show answers
     print(f"Day {int(day_number)}a: {answer_a if answer_a else '-'}")
     print(f"Day {int(day_number)}b: {answer_b if answer_b else '-'}")
-    return
-
-
-@app.cell
-def _():
-    a = [True, True, False, True]
-    sum(a)
-    return
-
-
-@app.cell
-def _():
-    b = False if False else not (False)
-    return (b,)
-
-
-@app.cell
-def _(b):
-    b
-    return
-
-
-@app.cell
-def _():
     return
 
 
