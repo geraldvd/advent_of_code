@@ -13,7 +13,7 @@ def _():
     import math
 
     # Settings
-    sample = True  # Fill in False, or the sample number (True and 1 are the same)
+    sample = False  # Fill in False, or the sample number (True and 1 are the same)
     return math, np, os, re, sample
 
 
@@ -89,6 +89,7 @@ def _(input_data, math, np):
 
 
     def problem_a(data):
+        """Quick way to find corners only. Note that the solution in problem b can also solve problem a."""
         edges, edge_lookup = generate_edges(data)
         edge_counts = {}
         # Count total number each edge for a tile appears for all tiles
@@ -103,105 +104,173 @@ def _(input_data, math, np):
 
 
     answer_a = problem_a(input_data)
-    return answer_a, extract_sides_bin, generate_edges
+    return (answer_a,)
 
 
 @app.cell
-def _(extract_sides_bin, generate_edges, input_data, np):
-    def get_single_neighbour(tile, edge, edges, edge_lookup):
-        neighbour = (
-            [e for e in edge_lookup[edge] if e != tile]
-            if len(edge_lookup[edge]) > 1
-            else None
+def _(input_data, np):
+    def image_variants(img):
+        """Compute all 8 rotations of an image. (4 normal rotations, 4 transposed rotations)"""
+        img = np.array(img)
+        img_T = np.transpose(img)
+        return [
+            img,
+            np.rot90(img),
+            np.rot90(np.rot90(img)),
+            np.rot90(np.rot90(np.rot90(img))),
+            img_T,
+            np.rot90(img_T),
+            np.rot90(np.rot90(img_T)),
+            np.rot90(np.rot90(np.rot90(img_T))),
+        ]
+
+
+    def get_key_grid(img_map):
+        """Return a matrix with the keys in there, to check against the example in the exercise.
+        Keep in mind that coordinates are [x, y], but matrix is [-y, x] (note the -).
+        Also note that the result of problem a can be obtained with:
+        key_grid[0, 0] * key_grid[0, -1] * key_grid[-1, 0] * key_grid[-1, -1]"""
+        coordinates = [v[0] for v in img_map.values()]
+        min_x, max_x = (
+            min([c[0] for c in coordinates]),
+            max([c[0] for c in coordinates]),
         )
-        print(neighbour)
-
-
-    def get_neighbours2(k, tile, edges, edge_lookup):
-        top, bottom, left, right = extract_sides_bin(tile)[:4]
-        neighbour = (
-            [e for e in edge_lookup[top] if e != k][0]
-            if len(edge_lookup[top]) > 1
-            else None
+        min_y, max_y = (
+            min([c[1] for c in coordinates]),
+            max([c[1] for c in coordinates]),
         )
-        print(top, bottom, left, right)
-        print(neighbour)
-        if neighbour:
-            print(edges[neighbour])
-
-
-    def get_neighbours(tile, edges, edge_lookup):
-        neighbours = []
-        for edge in edges[tile]:
-            neighbour_found = [t for t in edge_lookup[edge] if t != tile]
-            neighbours.append(neighbour_found[0] if len(neighbour_found) else None)
-        return neighbours[:4]
-
-
-    def get_tile_grid(tile_coords):
-        min_x = min([c[0] for c in tile_coords.values()])
-        max_x = max([c[0] for c in tile_coords.values()])
-        min_y = min([c[1] for c in tile_coords.values()])
-        max_y = max([c[1] for c in tile_coords.values()])
-        grid = np.zeros((max_y - min_y, max_x - min_x))
+        grid = np.zeros((max_y - min_y + 1, max_x - min_x + 1))
+        for k, v in img_map.items():
+            xi, yi = v[0]
+            grid[(grid.shape[0] - (yi - min_y) - 1, xi - min_x)] = k
         return grid
 
 
-    def problem_b(data):
-        edges, edge_lookup = generate_edges(data)
-        key_list = list(data.keys())
-        tile_coords = {k: None for k in key_list}
-        tile_coords[key_list[0]] = (0, 0)
-        counter = 0
-        while None in tile_coords.values() and counter < 10:
-            counter += 1
-            for k in key_list:
-                if not tile_coords[k]:
+    def create_image_map(data):
+        """Function to create full image map. This can be used to calculate problems a and b"""
+        # Store all rotations of each image
+        all_variants = {id: image_variants(data[id]) for id in data.keys()}
+
+        # Keep track of keys
+        k_cur = next(iter(all_variants.keys()))
+        next_keys = set()
+
+        # img_map is the resulting grid of images
+        img_map = {k_cur: ((0, 0), all_variants[k_cur][0])}
+
+        # Keep looping until there is no new k_cur to be found
+        while k_cur is not None:
+            # Extract sides/edges of img k_cur
+            edge_left = img_map[k_cur][1][:, 0]
+            edge_right = img_map[k_cur][1][:, -1]
+            edge_up = img_map[k_cur][1][0, :]
+            edge_down = img_map[k_cur][1][-1, :]
+
+            # Store coordinates of k_cur for ease of access
+            x, y = img_map[k_cur][0]
+
+            for k in all_variants.keys():
+                # If k is already in the image map, continue
+                if k in img_map.keys():
                     continue
-                xi, yi = tile_coords[k]
-                n_up, n_right, n_bottom, n_left = get_neighbours(
-                    k, edges, edge_lookup
-                )
-                if n_up:
-                    tile_coords[n_up] = (xi, yi + 1)
-                if n_right:
-                    tile_coords[n_right] = (xi + 1, yi)
-                if n_bottom:
-                    tile_coords[n_bottom] = (xi, yi - 1)
-                if n_left:
-                    tile_coords[n_left] = (xi - 1, yi)
-        print(tile_coords)
-        print(get_tile_grid(tile_coords))
-        # # Key is (x, y), value is (tile_id, bool(flipped))
-        # tile_coords = {(0, 0): (start_key, False)}
-        # adj_tiles = [(0, 0)]
-        # while len(adj_tiles):
-        #     new_adj_tiles = []
-        #     for x, y in adj_tiles:
-        #         t_id, t_flipped = tile_coords[(x, y)]
-        #         for xi in [x-1, x+1]:
-        #             for yi in [y-1, y+1]:
+                # Check all possible images
+                for img in all_variants[k]:
+                    # Check left against right of k
+                    if np.array_equal(edge_left, img[:, -1]):
+                        next_keys.add(k)
+                        img_map[k] = ((x - 1, y), img)
+                        break
+                    # Check right against left of k
+                    if np.array_equal(edge_right, img[:, 0]):
+                        next_keys.add(k)
+                        img_map[k] = ((x + 1, y), img)
+                        break
 
-        #         for i, edge in enumerate(edges[t_id]):
-        #             match i:
-        #                 # UP
-        #                 case 0:
-        #                     neighbours = [t for t in edge_lookup[edge] if t != t_id]
-        #                     assert len(neighbours) < 2, "Assumption that there is max 1 neighbour found"
-        #                     if len(neighbours):
-        #                         tile_coords[(xi, yi+1)] = (neighbours[0], False)
-        #                         new_adj_tiles.append((xi, yi+1))
+                    # Check up against down of k
+                    if np.array_equal(edge_up, img[-1, :]):
+                        next_keys.add(k)
+                        img_map[k] = ((x, y + 1), img)
+                        break
 
-        #         print([edge_lookup[e] for e in edges[t_id]])
-        #     break
+                    # Check down against up of k
+                    if np.array_equal(edge_down, img[0, :]):
+                        next_keys.add(k)
+                        img_map[k] = ((x, y - 1), img)
+                        break
+
+            # Pick next current key until no more left
+            if len(next_keys):
+                k_cur = next_keys.pop()
+            else:
+                k_cur = None
+        return img_map
+
+
+    def print_grid(g):
+        """Print visual grid with # and ."""
+        for i in range(g.shape[0]):
+            for j in range(g.shape[1]):
+                print("#" if g[i, j] else ".", end="")
+            print()
         print()
-        for k in edges.keys():
-            print(k, edges[k])
-            for e in edges[k]:
-                get_single_neighbour(k, e, edges, edge_lookup)
-        print()
-        get_neighbours2(2311, data[2311], edges, edge_lookup)
-        return None
+
+
+    def compose_full_image(img_map):
+        """Remove borders of the snippets and compose the full image to find sea monsters."""
+        # Crop the edge of the images for each ID
+        img_snippets = {k: img_map[k][1][1:-1, 1:-1] for k in img_map.keys()}
+        # Compose a list of lists with the img snippets in there
+        key_grid = get_key_grid(img_map)
+        img_grid = []
+        for i in range(key_grid.shape[0]):
+            line = []
+            for j in range(key_grid.shape[1]):
+                line.append(img_snippets[key_grid[i, j]])
+            img_grid.append(line)
+        # Return np.block, which stitches np arrays togeher
+        return np.block(img_grid)
+
+
+    def monster_patterns():
+        """Monster pattern is given in the exercise. Convert to np array with ones and zeros.
+        Then, rotate and transpose to get all variants, and return a list of coordinates where values are 1."""
+        # Convert input from exercise to 2d numpy array of ones and zeros
+        inp = "                  # \n#    ##    ##    ###\n #  #  #  #  #  #   "
+        pattern = [
+            [int(i) for i in list(l.replace("#", "1").replace(" ", "0"))]
+            for l in inp.split("\n")
+        ]
+
+        # Get all variants of monsters
+        pattern_variants = image_variants(pattern)
+        return pattern_variants
+
+
+    def problem_b(data):
+        """Recalculated entire grid, since the method used in problem a is not sufficient for problem b."""
+        img_map = create_image_map(data)
+        key_grid = get_key_grid(img_map)
+        img = compose_full_image(img_map)
+        print(key_grid)
+
+        # Scan each monster pattern, and check if an image is valid
+        patterns = monster_patterns()
+        for p in patterns:
+            # Convert matrix of 1 and 0 to coordinates of the ones.
+            coords_to_zero = np.argwhere(p)
+            # Scan through the image to make sure the pattern is tested everywhere
+            for i in range(img.shape[0] - p.shape[0]):
+                for j in range(img.shape[1] - p.shape[1]):
+                    # Check if the entire pattern is there
+                    pattern_found = True
+                    for c in coords_to_zero:
+                        if img[i + c[0], j + c[1]] == 0:
+                            pattern_found = False
+                    # If the entire pattern is there, loop again to reset the values to 0
+                    if pattern_found:
+                        for c in coords_to_zero:
+                            img[i + c[0], j + c[1]] = 0
+        return np.sum(img)
 
 
     answer_b = problem_b(input_data)
@@ -213,11 +282,6 @@ def _(answer_a, answer_b, day_number):
     # Show answers
     print(f"Day {int(day_number)}a: {answer_a if answer_a else '-'}")
     print(f"Day {int(day_number)}b: {answer_b if answer_b else '-'}")
-    return
-
-
-@app.cell
-def _():
     return
 
 
