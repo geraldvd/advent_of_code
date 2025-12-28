@@ -9,9 +9,10 @@ def _():
     # Import statements
     import os
     import numpy as np
+    import time
 
     # Settings
-    sample = True  # Fill in False, or the sample number (True and 1 are the same)
+    sample = False  # Fill in False, or the sample number (True and 1 are the same)
     return os, sample
 
 
@@ -55,20 +56,22 @@ def _(input_data):
         return value
 
 
+    def find_loop_size(subject_number, public_key):
+        """Determine loop size. Note: transform function cannot be used for this, as it keeps looping from zero."""
+        loop_size = 0
+        value = 1
+        while value != public_key:
+            # Shorter notation of the instructions done in transform().
+            value = (value * subject_number) % 20201227
+            loop_size += 1
+        return loop_size
+
+
     def problem_a(data):
         subject_number = 7
         # Determine card loop size
-        loop_size_card = 0
-        value = 1
-        while value != data["card"]:
-            loop_size_card += 1
-            value = transform(subject_number, loop_size_card)
-        # Determine door loop size
-        loop_size_door = 0
-        value = 1
-        while value != data["door"]:
-            loop_size_door += 1
-            value = transform(subject_number, loop_size_door)
+        loop_size_card = find_loop_size(subject_number, data["card"])
+        loop_size_door = find_loop_size(subject_number, data["door"])
 
         # Return encryption key after checking the one from card and door are equal
         assert transform(data["door"], loop_size_card) == transform(
@@ -82,26 +85,9 @@ def _(input_data):
 
 
 @app.cell
-def _(input_data):
-    def problem_b(data):
-        # TODO solve problem b
-        return None
-
-
-    answer_b = problem_b(input_data)
-    return (answer_b,)
-
-
-@app.cell
-def _(answer_a, answer_b, day_number):
+def _(answer_a, day_number):
     # Show answers
     print(f"Day {int(day_number)}a: {answer_a if answer_a else '-'}")
-    print(f"Day {int(day_number)}b: {answer_b if answer_b else '-'}")
-    return
-
-
-@app.cell
-def _():
     return
 
 
